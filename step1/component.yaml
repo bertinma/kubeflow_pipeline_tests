@@ -1,0 +1,24 @@
+name : step1
+description: create credentials for aws connection 
+
+inputs:
+  - {name: Input, type: Integer, description: 'input integer'}
+  - {name: Sum, type: Integer, description: 'integer to sum to input'}
+
+outputs:
+  - {name: Output, type: LocalPath, description: 'Path to data'}
+
+implementation:
+  container:
+    image: gcr.io/tough-variety-310920/step1@sha256:9a912cb002763f4b4682b82df452b6529d1eb6d9536799160ac05029cad05f5a
+    # command is a list of strings (command-line arguments). 
+    # The YAML language has two syntaxes for lists and you can use either of them. 
+    # Here we use the "flow syntax" - comma-separated strings inside square brackets.
+    command: [
+      python3, step1.py,
+      --output,
+      {outputPath: Output},      
+      --input,
+      {inputValue: Input},
+      --plus,
+      {inputValue: Sum}]

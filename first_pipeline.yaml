@@ -1,0 +1,89 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: first-pipeline-
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.12, pipelines.kubeflow.org/pipeline_compilation_time: '2022-04-20T17:31:59.225065',
+    pipelines.kubeflow.org/pipeline_spec: '{"inputs": [{"name": "input"}, {"name":
+      "sum"}], "name": "First Pipeline"}'}
+  labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.12}
+spec:
+  entrypoint: first-pipeline
+  templates:
+  - name: first-pipeline
+    inputs:
+      parameters:
+      - {name: input}
+      - {name: sum}
+    dag:
+      tasks:
+      - name: step1
+        template: step1
+        arguments:
+          parameters:
+          - {name: input, value: '{{inputs.parameters.input}}'}
+          - {name: sum, value: '{{inputs.parameters.sum}}'}
+      - name: step2
+        template: step2
+        dependencies: [step1]
+        arguments:
+          artifacts:
+          - {name: step1-Output, from: '{{tasks.step1.outputs.artifacts.step1-Output}}'}
+  - name: step1
+    container:
+      args: []
+      command: [python3, step1.py, --output, /tmp/outputs/Output/data, --input, '{{inputs.parameters.input}}',
+        --plus, '{{inputs.parameters.sum}}']
+      image: gcr.io/tough-variety-310920/step1@sha256:9a912cb002763f4b4682b82df452b6529d1eb6d9536799160ac05029cad05f5a
+    inputs:
+      parameters:
+      - {name: input}
+      - {name: sum}
+    outputs:
+      artifacts:
+      - {name: step1-Output, path: /tmp/outputs/Output/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.12
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "create
+          credentials for aws connection", "implementation": {"container": {"command":
+          ["python3", "step1.py", "--output", {"outputPath": "Output"}, "--input",
+          {"inputValue": "Input"}, "--plus", {"inputValue": "Sum"}], "image": "gcr.io/tough-variety-310920/step1@sha256:9a912cb002763f4b4682b82df452b6529d1eb6d9536799160ac05029cad05f5a"}},
+          "inputs": [{"description": "input integer", "name": "Input", "type": "Integer"},
+          {"description": "integer to sum to input", "name": "Sum", "type": "Integer"}],
+          "name": "step1", "outputs": [{"description": "Path to data", "name": "Output",
+          "type": "LocalPath"}]}', pipelines.kubeflow.org/component_ref: '{"digest":
+          "cf855d5d08769ed1e0f5f83c837e2eda29dcb3418958492c6c365ec0fd135293", "url":
+          "step1/component.yaml"}', pipelines.kubeflow.org/arguments.parameters: '{"Input":
+          "{{inputs.parameters.input}}", "Sum": "{{inputs.parameters.sum}}"}'}
+  - name: step2
+    container:
+      args: []
+      command: [python3, step2.py, --output, /tmp/outputs/Output/data, --input, /tmp/inputs/Input/data]
+      image: gcr.io/tough-variety-310920/step2@sha256:7a9091ff0731cfa503de6127c4dedf1c4ff0f058064ff6d34335ccaeca8a2e2e
+    inputs:
+      artifacts:
+      - {name: step1-Output, path: /tmp/inputs/Input/data}
+    outputs:
+      artifacts:
+      - {name: step2-Output, path: /tmp/outputs/Output/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.12
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "create
+          credentials for aws connection", "implementation": {"container": {"command":
+          ["python3", "step2.py", "--output", {"outputPath": "Output"}, "--input",
+          {"inputPath": "Input"}], "image": "gcr.io/tough-variety-310920/step2@sha256:7a9091ff0731cfa503de6127c4dedf1c4ff0f058064ff6d34335ccaeca8a2e2e"}},
+          "inputs": [{"description": "input file", "name": "Input", "type": "LocalPath"}],
+          "name": "step2", "outputs": [{"description": "Integer", "name": "Output",
+          "type": "Integer"}]}', pipelines.kubeflow.org/component_ref: '{"digest":
+          "7e56e489bea1d113fcd23764437b06a59d001ee3619a2123412faa199d2bd086", "url":
+          "step2/component.yaml"}'}
+  arguments:
+    parameters:
+    - {name: input}
+    - {name: sum}
+  serviceAccountName: pipeline-runner
